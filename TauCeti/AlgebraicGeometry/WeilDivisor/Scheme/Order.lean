@@ -143,11 +143,20 @@ theorem finite_support_orderAt
 
 /-- The scheme-theoretic order system on the codimension-one points of a Noetherian integral
 scheme. -/
-noncomputable def orderSystem
+@[expose] noncomputable def orderSystem
     (X : Scheme.{u}) [IsIntegral X] [IsNoetherian X] :
     WeilDivisor.OrderSystem (CodimensionOnePoint X) (Additive X.functionFieldˣ) where
   ord := orderAt
   finite_support := finite_support_orderAt X
+
+/-- The order homomorphisms of the scheme order system are the geometric orders of vanishing.
+This projection lemma lets downstream modules use the concrete order system without unfolding
+its opaque finite-support field. -/
+@[simp]
+lemma orderSystem_ord (X : Scheme.{u}) [IsIntegral X] [IsNoetherian X]
+    (x : CodimensionOnePoint X) :
+    (orderSystem X).ord x = orderAt x :=
+  rfl
 
 end
 

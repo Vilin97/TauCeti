@@ -113,6 +113,14 @@ lemma principalDivisor_sub (g₁ g₂ : G) :
     S.principalDivisor (g₁ - g₂) = S.principalDivisor g₁ - S.principalDivisor g₂ :=
   map_sub S.principalHom g₁ g₂
 
+/-- The principal-divisor construction depends only on the family of order homomorphisms, not
+on the proof that their supports are finite. This is the transport lemma used when a geometric
+order system is compared with an abstractly supplied one. -/
+lemma principalDivisor_eq_of_ord_eq {T : OrderSystem X G} (hord : S.ord = T.ord) (g : G) :
+    S.principalDivisor g = T.principalDivisor g := by
+  ext x
+  rw [coeff_principalDivisor, coeff_principalDivisor, hord]
+
 /-- The subgroup of principal divisors. -/
 noncomputable def principalSubgroup : AddSubgroup (WeilDivisor X) :=
   S.principalHom.range
@@ -261,6 +269,20 @@ For a smooth proper curve over a field `k`, the intended weight is the residue-f
 poles, counted with residue-field degrees. -/
 @[expose] def IsWeightedDegreeZero (w : X → ℤ) : Prop :=
   ∀ g, weightedDegree w (S.principalDivisor g) = 0
+
+/-- Weighted-degree-zero principal divisors are invariant under replacing an order system by
+one with the same order homomorphisms. In particular, an abstract contract can be discharged by
+the concrete geometric order system without identifying the finite-support proof fields. -/
+lemma isWeightedDegreeZero_congr_ord {T : OrderSystem X G} (hord : S.ord = T.ord)
+    (w : X → ℤ) :
+    S.IsWeightedDegreeZero w ↔ T.IsWeightedDegreeZero w := by
+  constructor
+  · intro h g
+    rw [← S.principalDivisor_eq_of_ord_eq hord g]
+    exact h g
+  · intro h g
+    rw [S.principalDivisor_eq_of_ord_eq hord g]
+    exact h g
 
 variable {S}
 
