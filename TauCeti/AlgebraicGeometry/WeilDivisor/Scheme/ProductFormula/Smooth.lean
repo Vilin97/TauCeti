@@ -77,6 +77,81 @@ theorem rationalFunctionMap_domain_eq_top_of_smoothRelativeDimension_one
   apply rationalFunctionMap_domain_eq_top_of_valuationRings K f g
   exact fun x ↦ valuationRing_stalk_of_smoothRelativeDimension_one K X f x
 
+/-- The everywhere-defined morphism `X ⟶ ℙ¹_K` represented by the rational function
+`[g : 1]` on an integral smooth relative curve. -/
+noncomputable def rationalFunctionMorphism
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (g : Additive X.functionFieldˣ) : X ⟶ ProjectiveLine.scheme K :=
+  let φ := rationalFunctionMap K f g
+  let h : φ.domain = ⊤ :=
+    rationalFunctionMap_domain_eq_top_of_smoothRelativeDimension_one K X f g
+  X.topIso.inv ≫ (X.isoOfEq h).inv ≫ φ.toPartialMap.hom
+
+/-- The global rational-function morphism represents the rational map from which it was
+constructed. -/
+@[simp]
+theorem rationalFunctionMorphism_toRationalMap
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (g : Additive X.functionFieldˣ) :
+    (rationalFunctionMorphism K X f g).toRationalMap = rationalFunctionMap K f g := by
+  let φ := rationalFunctionMap K f g
+  let h : φ.domain = ⊤ :=
+    rationalFunctionMap_domain_eq_top_of_smoothRelativeDimension_one K X f g
+  have he : (X.isoOfEq h).inv = (X.isoOfEq h.symm).hom := by
+    rw [← cancel_mono φ.domain.ι]
+    simp
+  change (X.topIso.inv ≫ (X.isoOfEq h).inv ≫ φ.toPartialMap.hom).toRationalMap = φ
+  calc
+    _ = φ.toPartialMap.toRationalMap := by
+      apply congrArg Scheme.PartialMap.toRationalMap
+      apply Scheme.PartialMap.ext _ _ h.symm
+      change X.topIso.hom ≫
+          (X.topIso.inv ≫ (X.isoOfEq h).inv ≫ φ.toPartialMap.hom) =
+        (X.isoOfEq h.symm).hom ≫ φ.toPartialMap.hom
+      simp only [Iso.hom_inv_id_assoc, he]
+    _ = φ := φ.toRationalMap_toPartialMap
+
+/-- Restriction of the global rational-function morphism to the function field is the point
+`[g : 1]`. -/
+@[simp]
+theorem rationalFunctionMorphism_fromFunctionField
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (g : Additive X.functionFieldˣ) :
+    (rationalFunctionMorphism K X f g).toPartialMap.fromFunctionField =
+      rationalFunctionGenericMorphism K f g := by
+  change (rationalFunctionMorphism K X f g).toRationalMap.fromFunctionField = _
+  rw [rationalFunctionMorphism_toRationalMap, rationalFunctionMap_fromFunctionField]
+
+/-- The global rational-function morphism is a morphism over `Spec K`. -/
+@[simp]
+theorem rationalFunctionMorphism_comp_structureMap
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (g : Additive X.functionFieldˣ) :
+    rationalFunctionMorphism K X f g ≫ ProjectiveLine.structureMap K = f := by
+  have hr :
+      (rationalFunctionMorphism K X f g ≫
+          ProjectiveLine.structureMap K).toRationalMap = f.toRationalMap := by
+    calc
+      _ = (rationalFunctionMorphism K X f g).toRationalMap.compHom
+          (ProjectiveLine.structureMap K) := rfl
+      _ = (rationalFunctionMap K f g).compHom
+          (ProjectiveLine.structureMap K) := by
+        rw [rationalFunctionMorphism_toRationalMap]
+      _ = f.toRationalMap := rationalFunctionMap_comp_structureMap K f g
+  have he := Scheme.PartialMap.toRationalMap_eq_iff.mp hr
+  have hhom :=
+    (Scheme.PartialMap.equiv_toPartialMap_iff_of_isSeparated
+      (S := ⊤_ Scheme)).mp he
+  change X.topIso.hom ≫
+      (rationalFunctionMorphism K X f g ≫ ProjectiveLine.structureMap K) =
+    X.topIso.hom ≫ f at hhom
+  apply (cancel_epi X.topIso.hom).mp
+  exact hhom
+
 end
 
 end SchemeWeilDivisor
