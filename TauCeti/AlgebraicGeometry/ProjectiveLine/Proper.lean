@@ -72,6 +72,13 @@ noncomputable instance (K : Type u) [Field K] : IsProper (structureMap K) := by
   dsimp only [structureMap]
   infer_instance
 
+/-- The structure morphism of the projective line satisfies the valuative criterion. -/
+lemma structureMap_valuativeCriterion (K : Type u) [Field K] :
+    ValuativeCriterion (structureMap K) := by
+  have h : IsProper (structureMap K) := inferInstance
+  rw [IsProper.eq_valuativeCriterion] at h
+  exact h.1.1.1
+
 end
 
 end ProjectiveLine
