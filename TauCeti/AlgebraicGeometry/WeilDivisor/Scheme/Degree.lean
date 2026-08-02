@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 module
 
 public import TauCeti.AlgebraicGeometry.ResidueDegree
-public import TauCeti.AlgebraicGeometry.ProjectiveLine.Basic
+public import TauCeti.AlgebraicGeometry.ProjectiveLine.Proper
 public import TauCeti.AlgebraicGeometry.WeilDivisor.Scheme.Order
 public import Mathlib.AlgebraicGeometry.Morphisms.Proper
 
@@ -77,6 +77,7 @@ local instance : Nonempty (⊤ : X.Opens) :=
 
 /-- The field map from the base field of an integral scheme to its function field, induced by
 the structure morphism. It is the composite through global sections and the generic stalk. -/
+@[expose]
 noncomputable def baseFieldToFunctionField (K : Type u) [Field K]
     (f : X ⟶ Spec (.of K)) : K →+* X.functionField :=
   (X.germToFunctionField ⊤).hom.comp
@@ -87,6 +88,7 @@ on an integral scheme over `K`. Its homogeneous coordinates are `[g : 1]`.
 
 Extending this morphism over a regular proper curve and comparing its zero and infinity fibres
 is the geometric route to the remaining non-global case of the product formula. -/
+@[expose]
 noncomputable def rationalFunctionGenericMorphism (K : Type u) [Field K]
     (f : X ⟶ Spec (.of K)) (g : Additive X.functionFieldˣ) :
     Spec (.of X.functionField) ⟶ ProjectiveLine.scheme K :=

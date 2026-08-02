@@ -21,7 +21,7 @@ rational function. It is the first geometric input to the product formula in
 
 public section
 
-open AlgebraicGeometry
+open CategoryTheory AlgebraicGeometry
 open scoped DirectSum
 
 namespace TauCeti
@@ -47,6 +47,27 @@ noncomputable instance (K : Type u) [Field K] : GradedAlgebra (homogeneousPieces
 /-- The projective line over `K`, realized as `Proj K[X₀, X₁]`. -/
 abbrev scheme (K : Type u) [Field K] : Scheme.{u} :=
   Proj (homogeneousPieces K)
+
+/-- The constant-polynomial equivalence from `K` to the degree-zero part of `K[X₀, X₁]`. -/
+@[expose]
+noncomputable def degreeZeroRingEquiv (K : Type u) [Field K] :
+    K ≃+* homogeneousPieces K 0 :=
+  RingEquiv.ofBijective (algebraMap K (homogeneousPieces K 0)) <| by
+    constructor
+    · intro r s hrs
+      exact MvPolynomial.C_injective (Fin 2) K (congrArg Subtype.val hrs)
+    · intro p
+      have hp : (p : MvPolynomial (Fin 2) K) ∈
+          (1 : Submodule K (MvPolynomial (Fin 2) K)) := by
+        simpa [homogeneousPieces, MvPolynomial.homogeneousSubmodule_zero] using p.property
+      obtain ⟨r, hr⟩ := Submodule.mem_one.mp hp
+      refine ⟨r, Subtype.ext ?_⟩
+      exact hr
+
+@[simp]
+lemma coe_degreeZeroRingEquiv_apply (K : Type u) [Field K] (r : K) :
+    ((degreeZeroRingEquiv K r : homogeneousPieces K 0) : MvPolynomial (Fin 2) K) =
+      MvPolynomial.C r := rfl
 
 private def coordinateRingHom (K F : Type u) [Field K] [Field F]
     (ι : K →+* F) (g : F) :
@@ -88,6 +109,29 @@ noncomputable def ofElement (K F : Type u) [Field K] [Field F]
     (ι : K →+* F) (g : F) : Spec (.of F) ⟶ scheme K :=
   Proj.fromOfGlobalSections (homogeneousPieces K) (coordinateRingHom K F ι g)
     (map_irrelevant_eq_top K F ι g)
+
+/-- Before identifying the degree-zero homogeneous coordinate ring with `K`, the point `[g : 1]`
+lies over the field map from that degree-zero ring to `F`. -/
+lemma ofElement_toSpecZero (K F : Type u) [Field K] [Field F]
+    (ι : K →+* F) (g : F) :
+    ofElement K F ι g ≫ Proj.toSpecZero (homogeneousPieces K) =
+      Spec.map (CommRingCat.ofHom
+        (ι.comp (degreeZeroRingEquiv K).symm.toRingHom)) := by
+  rw [ofElement, Proj.fromOfGlobalSections_toSpecZero]
+  rw [← SpecMap_ΓSpecIso_hom, ← Spec.map_comp]
+  congr 1
+  ext p
+  obtain ⟨r, rfl⟩ := (degreeZeroRingEquiv K).surjective p
+  simp only [CommRingCat.ofHom_comp, Category.assoc, CommRingCat.hom_comp,
+    ConcreteCategory.hom_ofHom, RingHom.coe_comp, Function.comp_apply,
+    RingEquiv.toRingHom_eq_coe, RingHom.coe_coe, RingEquiv.symm_apply_apply]
+  change (Scheme.ΓSpecIso (.of F)).hom
+    (coordinateRingHom K F ι g
+      (((degreeZeroRingEquiv K r : homogeneousPieces K 0) :
+        MvPolynomial (Fin 2) K))) = ι r
+  rw [coe_degreeZeroRingEquiv_apply]
+  dsimp [coordinateRingHom, degreeZeroRingEquiv]
+  simp
 
 end
 
