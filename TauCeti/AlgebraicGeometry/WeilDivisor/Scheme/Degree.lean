@@ -108,6 +108,22 @@ lemma orderSystem_isWeightedDegreeZero_iff (f : X ⟶ Y) :
     rw [relativeDegree_orderSystem_principalDivisor_apply]
     exact h g
 
+/-- Transport the geometric weighted-degree-zero theorem to any abstract order system whose
+order homomorphisms are exactly Mathlib's scheme-theoretic orders of vanishing. This is the
+permanent adapter consumed by the proper-curve Challenge contract; finite-support proof fields
+need not be propositionally identified. -/
+lemma isWeightedDegreeZero_of_ord_eq_orderAt
+    (f : X ⟶ Y)
+    (S : WeilDivisor.OrderSystem (CodimensionOnePoint X) (Additive X.functionFieldˣ))
+    (hord : S.ord = orderAt)
+    (hConcrete : (orderSystem X).IsWeightedDegreeZero
+      (fun x ↦ (f.residueDegree x : ℤ))) :
+    S.IsWeightedDegreeZero (fun x ↦ (f.residueDegree x : ℤ)) := by
+  have hOrders : S.ord = (orderSystem X).ord := by
+    funext x
+    rw [hord, orderSystem_ord]
+  exact (S.isWeightedDegreeZero_congr_ord hOrders _).mpr hConcrete
+
 /-- A rational function represented by a unit on an open neighbourhood has order zero at every
 codimension-one point of that neighbourhood. -/
 lemma orderAt_eq_zero_of_eq_germToFunctionField
