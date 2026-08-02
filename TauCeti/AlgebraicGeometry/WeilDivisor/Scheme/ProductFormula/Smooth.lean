@@ -13,9 +13,10 @@ public import Mathlib.AlgebraicGeometry.Properties
 # Extending rational functions on smooth relative curves
 
 Every stalk of an integral scheme smooth of relative dimension one over a field is a valuation
-ring, and its codimension-one stalks are discrete valuation rings. Combining this local algebra
-with properness of the projective line shows that the rational map `[g : 1]` attached to a nonzero
-rational function is defined everywhere.
+ring, and its non-generic stalks are discrete valuation rings. Consequently every non-generic
+point has codimension one and is closed, so proper closed subsets of a Noetherian relative curve
+are finite. Combining this local algebra with properness of the projective line shows that the
+rational map `[g : 1]` attached to a nonzero rational function is defined everywhere.
 
 This discharges the local-extension step in the geometric product-formula argument from
 `TauCetiRoadmap/JacobianChallenge/README.md`, Layer A, "Divisors on a curve".
@@ -23,7 +24,7 @@ This discharges the local-extension step in the geometric product-formula argume
 
 public section
 
-open CategoryTheory AlgebraicGeometry
+open CategoryTheory AlgebraicGeometry Order TopologicalSpace
 open TauCeti.RingTheory
 
 namespace TauCeti
@@ -68,6 +69,29 @@ theorem valuationRing_stalk_of_smoothRelativeDimension_one
   exact valuationRing_of_isLocalizationAtPrime_of_isStandardSmoothOfRelativeDimension_one
     Γ(Spec (.of K), ⊤) Γ(X, V) (X.presheaf.stalk x) q
 
+/-- The stalk at any non-generic point of an integral scheme smooth of relative dimension one
+over a field is a discrete valuation ring. -/
+theorem isDiscreteValuationRing_stalk_of_ne_genericPoint_of_smoothRelativeDimension_one
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (x : X) (hx : x ≠ genericPoint X) :
+    IsDiscreteValuationRing (X.presheaf.stalk x) := by
+  letI : PartialOrder X := specializationOrder X
+  letI : Smooth f := SmoothOfRelativeDimension.smooth 1 f
+  letI : IsLocallyNoetherian X := LocallyOfFiniteType.isLocallyNoetherian f
+  letI : ValuationRing (X.presheaf.stalk x) :=
+    valuationRing_stalk_of_smoothRelativeDimension_one K X f x
+  have hfield : ¬ IsField (X.presheaf.stalk x) := by
+    intro h
+    letI : Field (X.presheaf.stalk x) := h.toField
+    have hdim : Ring.KrullDimLE 0 (X.presheaf.stalk x) := inferInstance
+    rw [Ring.krullDimLE_iff, ringKrullDim_stalk_eq_coheight] at hdim
+    have hxzero : coheight x = 0 := by
+      exact le_antisymm (by exact_mod_cast hdim) (by simp)
+    exact hx ((coheight_eq_zero.mp hxzero).eq_of_le (genericPoint_specializes x))
+  exact ((IsDiscreteValuationRing.TFAE (X.presheaf.stalk x) hfield).out 1 0).mp
+    (show ValuationRing (X.presheaf.stalk x) from inferInstance)
+
 /-- A codimension-one stalk of an integral scheme smooth of relative dimension one over a field
 is a discrete valuation ring. -/
 theorem isDiscreteValuationRing_stalk_of_smoothRelativeDimension_one
@@ -75,18 +99,91 @@ theorem isDiscreteValuationRing_stalk_of_smoothRelativeDimension_one
     (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
     (x : CodimensionOnePoint X) :
     IsDiscreteValuationRing (X.presheaf.stalk x.1) := by
-  letI : Smooth f := SmoothOfRelativeDimension.smooth 1 f
-  letI : IsLocallyNoetherian X := LocallyOfFiniteType.isLocallyNoetherian f
-  letI : ValuationRing (X.presheaf.stalk x.1) :=
-    valuationRing_stalk_of_smoothRelativeDimension_one K X f x.1
-  have hfield : ¬ IsField (X.presheaf.stalk x.1) := by
-    intro h
-    letI : Field (X.presheaf.stalk x.1) := h.toField
-    have hdim : Ring.KrullDimLE 0 (X.presheaf.stalk x.1) := inferInstance
-    rw [Ring.krullDimLE_iff, ringKrullDim_stalk_eq_coheight, x.2] at hdim
-    norm_num at hdim
-  exact ((IsDiscreteValuationRing.TFAE (X.presheaf.stalk x.1) hfield).out 1 0).mp
-    (show ValuationRing (X.presheaf.stalk x.1) from inferInstance)
+  apply isDiscreteValuationRing_stalk_of_ne_genericPoint_of_smoothRelativeDimension_one
+    K X f x.1
+  intro hx
+  have hco := x.2
+  rw [hx] at hco
+  change coheight (⊤ : X) = 1 at hco
+  norm_num at hco
+
+/-- Every non-generic point of an integral smooth relative curve has codimension one. -/
+theorem coheight_eq_one_of_ne_genericPoint_of_smoothRelativeDimension_one
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (x : X) (hx : x ≠ genericPoint X) :
+    coheight x = 1 := by
+  letI : PartialOrder X := specializationOrder X
+  letI : OrderTop X :=
+    { top := genericPoint X
+      le_top a := genericPoint_specializes a }
+  letI : IsDiscreteValuationRing (X.presheaf.stalk x) :=
+    isDiscreteValuationRing_stalk_of_ne_genericPoint_of_smoothRelativeDimension_one
+      K X f x hx
+  have hdim := IsDiscreteValuationRing.ringKrullDim_eq_one (X.presheaf.stalk x)
+  rw [ringKrullDim_stalk_eq_coheight] at hdim
+  exact_mod_cast hdim
+
+/-- Every non-generic point of an integral smooth relative curve is a closed point. -/
+theorem isClosed_singleton_of_ne_genericPoint_of_smoothRelativeDimension_one
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (x : X) (hx : x ≠ genericPoint X) :
+    IsClosed ({x} : Set X) := by
+  letI : PartialOrder X := specializationOrder X
+  letI : OrderTop X :=
+    { top := genericPoint X
+      le_top a := genericPoint_specializes a }
+  have hxone : coheight x = 1 :=
+    coheight_eq_one_of_ne_genericPoint_of_smoothRelativeDimension_one K X f x hx
+  have hxMin : IsMin x := by
+    intro y hy
+    apply le_of_eq
+    by_contra hxy
+    have hyx : y < x := lt_of_le_of_ne' hy hxy
+    have hyne : y ≠ genericPoint X := by
+      intro hygen
+      subst y
+      exact hx (le_antisymm (genericPoint_specializes x) hy)
+    have hyone : coheight y = 1 :=
+      coheight_eq_one_of_ne_genericPoint_of_smoothRelativeDimension_one K X f y hyne
+    have hlt : coheight x < coheight y := coheight_strictAnti hyx (by simp [hxone])
+    rw [hxone, hyone] at hlt
+    exact lt_irrefl _ hlt
+  rw [← closure_eq_iff_isClosed, closure_singleton_eq_Iic, hxMin.Iic_eq]
+
+/-- Every proper closed subset of an integral Noetherian smooth relative curve is finite. -/
+theorem finite_closed_subset_of_smoothRelativeDimension_one
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X] [IsNoetherian X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (Z : Set X) (hZ : IsClosed Z) (hZne : Z ≠ Set.univ) :
+    Z.Finite := by
+  letI : QuasiSober Z := hZ.isClosedEmbedding_subtypeVal.quasiSober
+  have hgp : (genericPoints Z).Finite :=
+    genericPoints.finite NoetherianSpace.finite_irreducibleComponents
+  have hgpClosed : IsClosed (genericPoints Z) := by
+    rw [← (genericPoints Z).biUnion_of_singleton]
+    refine hgp.isClosed_biUnion fun z _ ↦ ?_
+    have hzGeneric : (z : X) ≠ genericPoint X := by
+      intro heq
+      have hmem : genericPoint X ∈ Z := heq ▸ z.property
+      have hsub : (Set.univ : Set X) ⊆ Z :=
+        ((genericPoint_spec X).mem_closed_set_iff hZ).mp hmem
+      exact hZne (Set.eq_univ_of_univ_subset hsub)
+    have hclosedX : IsClosed ({(z : X)} : Set X) :=
+      isClosed_singleton_of_ne_genericPoint_of_smoothRelativeDimension_one
+        K X f z hzGeneric
+    convert hclosedX.preimage continuous_subtype_val using 1
+    ext w
+    constructor
+    · exact fun h ↦ congrArg Subtype.val h
+    · exact fun h ↦ Subtype.ext h
+  have hgpEq : genericPoints Z = Set.univ := by
+    rw [← hgpClosed.closure_eq, genericPoints.closure]
+  apply Set.finite_coe_iff.mpr
+  exact Set.finite_univ_iff.mp (by
+    rw [← hgpEq]
+    exact hgp)
 
 /-- On a smooth relative curve, a rational function represented by a nonzero element of a
 codimension-one stalk has order equal to the finite order of that stalk element. -/
