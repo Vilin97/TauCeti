@@ -65,6 +65,29 @@ lemma orderAt_apply (x : CodimensionOnePoint X) (f : Additive X.functionFieldˣ)
     MulEquiv.coe_toMonoidHom, Function.comp_apply, WithZero.unitsWithZeroEquiv_apply]
   congr 1
 
+/-- If a nonzero rational function comes from the codimension-one stalk, its order is the
+finite order of that stalk element. This is the local bridge between scheme-theoretic orders
+and fibre multiplicities in a discrete valuation ring. -/
+lemma orderAt_eq_ord_stalk_of_eq_algebraMap
+    (x : CodimensionOnePoint X)
+    [IsDiscreteValuationRing (X.presheaf.stalk x.1)]
+    {a : X.presheaf.stalk x.1} (ha : a ≠ 0)
+    (g : Additive X.functionFieldˣ)
+    (hg : ((Additive.toMul g : X.functionFieldˣ) : X.functionField) =
+      algebraMap (X.presheaf.stalk x.1) X.functionField a) :
+    orderAt x g = (Ring.ord (X.presheaf.stalk x.1) a).toNat := by
+  rw [orderAt_apply, hg]
+  have halg : algebraMap (X.presheaf.stalk x.1) X.functionField a ≠ 0 := by
+    simpa using ha
+  rw [X.ord_eq_iff x.property halg]
+  change Ring.ordFrac (X.presheaf.stalk x.1)
+      (algebraMap (X.presheaf.stalk x.1) X.functionField a) = _
+  rw [Ring.ordFrac_eq_ord (X.presheaf.stalk x.1) ha]
+  apply Ring.ordMonoidWithZeroHom_eq_coe
+  · exact mem_nonZeroDivisors_iff_ne_zero.mpr ha
+  · exact (ENat.coe_toNat (Ring.ord_ne_top
+      (mem_nonZeroDivisors_iff_ne_zero.mpr ha))).symm
+
 end LocalOrder
 
 /-- The codimension-one points outside a nonempty open of a Noetherian integral scheme are the

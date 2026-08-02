@@ -13,8 +13,9 @@ public import Mathlib.AlgebraicGeometry.Properties
 # Extending rational functions on smooth relative curves
 
 Every stalk of an integral scheme smooth of relative dimension one over a field is a valuation
-ring. Combining this local algebra with properness of the projective line shows that the rational
-map `[g : 1]` attached to a nonzero rational function is defined everywhere.
+ring, and its codimension-one stalks are discrete valuation rings. Combining this local algebra
+with properness of the projective line shows that the rational map `[g : 1]` attached to a nonzero
+rational function is defined everywhere.
 
 This discharges the local-extension step in the geometric product-formula argument from
 `TauCetiRoadmap/JacobianChallenge/README.md`, Layer A, "Divisors on a curve".
@@ -66,6 +67,41 @@ theorem valuationRing_stalk_of_smoothRelativeDimension_one
     hV.isLocalization_stalk ⟨x, hx⟩
   exact valuationRing_of_isLocalizationAtPrime_of_isStandardSmoothOfRelativeDimension_one
     Γ(Spec (.of K), ⊤) Γ(X, V) (X.presheaf.stalk x) q
+
+/-- A codimension-one stalk of an integral scheme smooth of relative dimension one over a field
+is a discrete valuation ring. -/
+theorem isDiscreteValuationRing_stalk_of_smoothRelativeDimension_one
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (x : CodimensionOnePoint X) :
+    IsDiscreteValuationRing (X.presheaf.stalk x.1) := by
+  letI : Smooth f := SmoothOfRelativeDimension.smooth 1 f
+  letI : IsLocallyNoetherian X := LocallyOfFiniteType.isLocallyNoetherian f
+  letI : ValuationRing (X.presheaf.stalk x.1) :=
+    valuationRing_stalk_of_smoothRelativeDimension_one K X f x.1
+  have hfield : ¬ IsField (X.presheaf.stalk x.1) := by
+    intro h
+    letI : Field (X.presheaf.stalk x.1) := h.toField
+    have hdim : Ring.KrullDimLE 0 (X.presheaf.stalk x.1) := inferInstance
+    rw [Ring.krullDimLE_iff, ringKrullDim_stalk_eq_coheight, x.2] at hdim
+    norm_num at hdim
+  exact ((IsDiscreteValuationRing.TFAE (X.presheaf.stalk x.1) hfield).out 1 0).mp
+    (show ValuationRing (X.presheaf.stalk x.1) from inferInstance)
+
+/-- On a smooth relative curve, a rational function represented by a nonzero element of a
+codimension-one stalk has order equal to the finite order of that stalk element. -/
+theorem orderAt_eq_ord_stalk_of_smoothRelativeDimension_one
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X] [IsLocallyNoetherian X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (x : CodimensionOnePoint X)
+    {a : X.presheaf.stalk x.1} (ha : a ≠ 0)
+    (g : Additive X.functionFieldˣ)
+    (hg : ((Additive.toMul g : X.functionFieldˣ) : X.functionField) =
+      algebraMap (X.presheaf.stalk x.1) X.functionField a) :
+    orderAt x g = (Ring.ord (X.presheaf.stalk x.1) a).toNat := by
+  letI : IsDiscreteValuationRing (X.presheaf.stalk x.1) :=
+    isDiscreteValuationRing_stalk_of_smoothRelativeDimension_one K X f x
+  exact orderAt_eq_ord_stalk_of_eq_algebraMap x ha g hg
 
 /-- The projective-line-valued rational map `[g : 1]` on an integral smooth relative curve is
 defined everywhere. -/
