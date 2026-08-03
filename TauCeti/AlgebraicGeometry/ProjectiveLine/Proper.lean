@@ -47,6 +47,7 @@ noncomputable instance (K : Type u) [Field K] :
     K (homogeneousPieces K 0) (MvPolynomial (Fin 2) K)
 
 /-- The structure morphism `ℙ¹_K ⟶ Spec K`. -/
+@[expose]
 noncomputable def structureMap (K : Type u) [Field K] : scheme K ⟶ Spec (.of K) :=
   Proj.toSpecZero (homogeneousPieces K) ≫
     Spec.map (degreeZeroRingEquiv K).toCommRingCatIso.hom

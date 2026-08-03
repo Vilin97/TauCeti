@@ -222,6 +222,67 @@ theorem isFinite_rationalFunctionMorphism_of_nonGlobal
   exact isFinite_rationalFunctionMorphism_of_no_universal_fiber K X f g
     (rationalFunctionMorphism_no_universal_fiber_of_nonGlobal K X f g hg)
 
+/-- A non-global rational function maps the generic point of its source curve to the generic
+point of the projective line. If the image were closed, its closed preimage would contain the
+generic point of the source and hence would be the whole curve, contradicting non-globality. -/
+theorem rationalFunctionMorphism_genericPoint_eq_genericPoint_of_nonGlobal
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (g : Additive X.functionFieldˣ)
+    (hg : ¬ ∃ a : Γ(X, ⊤),
+      ((Additive.toMul g : X.functionFieldˣ) : X.functionField) =
+        X.germToFunctionField ⊤ a) :
+    rationalFunctionMorphism K X f g (genericPoint X) =
+      genericPoint (ProjectiveLine.scheme K) := by
+  let φ := rationalFunctionMorphism K X f g
+  by_contra hφ
+  have hclosed : IsClosed ({φ (genericPoint X)} : Set (ProjectiveLine.scheme K)) :=
+    isClosed_singleton_of_ne_genericPoint_of_smoothRelativeDimension_one
+      K (ProjectiveLine.scheme K) (ProjectiveLine.structureMap K)
+        (φ (genericPoint X)) hφ
+  have hpreClosed : IsClosed (φ ⁻¹' {φ (genericPoint X)}) :=
+    hclosed.preimage φ.continuous
+  have hmem : genericPoint X ∈ φ ⁻¹' {φ (genericPoint X)} := by simp
+  have hsub : (Set.univ : Set X) ⊆ φ ⁻¹' {φ (genericPoint X)} :=
+    ((genericPoint_spec X).mem_closed_set_iff hpreClosed).mp hmem
+  have huniv : φ ⁻¹' {φ (genericPoint X)} = Set.univ :=
+    Set.eq_univ_of_univ_subset hsub
+  exact (rationalFunctionMorphism_no_universal_fiber_of_nonGlobal K X f g hg
+    (φ (genericPoint X))) huniv
+
+/-- The projective-line morphism of a non-global rational function is dominant. -/
+theorem isDominant_rationalFunctionMorphism_of_nonGlobal
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f]
+    (g : Additive X.functionFieldˣ)
+    (hg : ¬ ∃ a : Γ(X, ⊤),
+      ((Additive.toMul g : X.functionFieldˣ) : X.functionField) =
+        X.germToFunctionField ⊤ a) :
+    IsDominant (rationalFunctionMorphism K X f g) := by
+  constructor
+  rw [denseRange_iff_closure_range]
+  apply Set.eq_univ_of_univ_subset
+  rw [← genericPoint_closure]
+  apply closure_mono
+  rw [Set.singleton_subset_iff]
+  exact ⟨genericPoint X,
+    rationalFunctionMorphism_genericPoint_eq_genericPoint_of_nonGlobal K X f g hg⟩
+
+/-- The projective-line morphism of a non-global rational function is surjective. -/
+theorem surjective_rationalFunctionMorphism_of_nonGlobal
+    (K : Type u) [Field K] (X : Scheme.{u}) [IsIntegral X]
+    (f : X ⟶ Spec (.of K)) [SmoothOfRelativeDimension 1 f] [IsProper f]
+    (g : Additive X.functionFieldˣ)
+    (hg : ¬ ∃ a : Γ(X, ⊤),
+      ((Additive.toMul g : X.functionFieldˣ) : X.functionField) =
+        X.germToFunctionField ⊤ a) :
+    Surjective (rationalFunctionMorphism K X f g) := by
+  letI : IsProper (rationalFunctionMorphism K X f g) :=
+    isProper_rationalFunctionMorphism K X f g
+  letI : IsDominant (rationalFunctionMorphism K X f g) :=
+    isDominant_rationalFunctionMorphism_of_nonGlobal K X f g hg
+  infer_instance
+
 end
 
 end SchemeWeilDivisor
