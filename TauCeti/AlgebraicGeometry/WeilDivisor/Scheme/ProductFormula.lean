@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 -/
 module
 
-public import TauCeti.AlgebraicGeometry.WeilDivisor.Scheme.Degree
+public import TauCeti.AlgebraicGeometry.WeilDivisor.Scheme.Degree.Basic
 public import Mathlib.AlgebraicGeometry.Birational.RationalMap
 
 /-!
