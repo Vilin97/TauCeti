@@ -822,85 +822,6 @@ lemma inverseAffineCoordinate_mem_primeIdealOf_iff_eq_infinityPoint
     rw [primeIdealOf_infinityPoint_asIdeal_of_mem]
     exact Ideal.subset_span (Set.mem_singleton _)
 
-/-- The zero point as a section of the projective-line structure morphism. -/
-noncomputable def zeroSection (K : Type u) [Field K] :
-    Spec (.of K) ⟶ scheme K :=
-  ofElement K K (RingHom.id K) 0
-
-@[simp]
-lemma zeroSection_comp_structureMap (K : Type u) [Field K] :
-    zeroSection K ≫ structureMap K = 𝟙 _ := by
-  rw [zeroSection, ofElement_comp_structureMap]
-  exact Spec.map_id (CommRingCat.of K)
-
-/-- The section `zeroSection` sends the unique point of `Spec K` to `[0 : 1]`. -/
-@[simp]
-lemma zeroSection_closedPoint (K : Type u) [Field K] :
-    zeroSection K (IsLocalRing.closedPoint K) = zeroPoint K := by
-  let s := zeroSection K
-  let z : Spec (.of K) := IsLocalRing.closedPoint K
-  let U := standardAffineOpen K
-  let hU := isAffineOpen_standardAffineOpen K
-  have hpre : s ⁻¹ᵁ U = ⊤ :=
-    ofElement_preimage_basicOpen_X_one K K (RingHom.id K) 0
-  have hzU : s z ∈ U := by
-    change z ∈ s ⁻¹ᵁ U
-    rw [hpre]
-    trivial
-  apply (affineCoordinate_mem_primeIdealOf_iff_eq_zeroPoint K (s z) hzU).mp
-  let htop := isAffineOpen_top (Spec (.of K))
-  have hcomap := IsAffineOpen.comap_primeIdealOf_appLE U hU ⊤ htop
-    (f := s) hpre.ge (x := z) trivial
-  have hideal := congrArg PrimeSpectrum.asIdeal hcomap
-  rw [PrimeSpectrum.comap_asIdeal] at hideal
-  rw [← hideal]
-  change s.appLE U ⊤ hpre.ge (affineCoordinate K) ∈
-    (htop.primeIdealOf ⟨z, trivial⟩).asIdeal
-  rw [show s.appLE U ⊤ hpre.ge (affineCoordinate K) = 0 by
-    simpa [s, zeroSection] using
-      ofElement_appLE_affineCoordinate K K (RingHom.id K) 0]
-  exact Ideal.zero_mem _
-
-/-- The point at infinity as a section of the projective-line structure morphism. -/
-noncomputable def infinitySection (K : Type u) [Field K] :
-    Spec (.of K) ⟶ scheme K :=
-  ofInverseElement K K (RingHom.id K) 0
-
-@[simp]
-lemma infinitySection_comp_structureMap (K : Type u) [Field K] :
-    infinitySection K ≫ structureMap K = 𝟙 _ := by
-  rw [infinitySection, ofInverseElement_comp_structureMap]
-  exact Spec.map_id (CommRingCat.of K)
-
-/-- The section `infinitySection` sends the unique point of `Spec K` to `[1 : 0]`. -/
-@[simp]
-lemma infinitySection_closedPoint (K : Type u) [Field K] :
-    infinitySection K (IsLocalRing.closedPoint K) = infinityPoint K := by
-  let s := infinitySection K
-  let z : Spec (.of K) := IsLocalRing.closedPoint K
-  let U := infinityAffineOpen K
-  let hU := isAffineOpen_infinityAffineOpen K
-  have hpre : s ⁻¹ᵁ U = ⊤ :=
-    ofInverseElement_preimage_basicOpen_X_zero K K (RingHom.id K) 0
-  have hzU : s z ∈ U := by
-    change z ∈ s ⁻¹ᵁ U
-    rw [hpre]
-    trivial
-  apply (inverseAffineCoordinate_mem_primeIdealOf_iff_eq_infinityPoint
-    K (s z) hzU).mp
-  let htop := isAffineOpen_top (Spec (.of K))
-  have hcomap := IsAffineOpen.comap_primeIdealOf_appLE U hU ⊤ htop
-    (f := s) hpre.ge (x := z) trivial
-  have hideal := congrArg PrimeSpectrum.asIdeal hcomap
-  rw [PrimeSpectrum.comap_asIdeal] at hideal
-  rw [← hideal]
-  change s.appLE U ⊤ hpre.ge (inverseAffineCoordinate K) ∈
-    (htop.primeIdealOf ⟨z, trivial⟩).asIdeal
-  rw [show s.appLE U ⊤ hpre.ge (inverseAffineCoordinate K) = 0 by
-    simpa [s, infinitySection] using
-      ofInverseElement_appLE_inverseAffineCoordinate K K (RingHom.id K) 0]
-  exact Ideal.zero_mem _
-
 private lemma away_zero_isStandardSmoothOfRelativeDimension_one
     (K : Type u) [Field K] :
     Algebra.IsStandardSmoothOfRelativeDimension 1 (homogeneousPieces K 0)
@@ -959,6 +880,84 @@ noncomputable instance (K : Type u) [Field K] :
   apply RingHom.locally_of
     RingHom.isStandardSmoothOfRelativeDimension_respectsIso
   exact chartRingHom_isStandardSmoothOfRelativeDimension_one K i
+
+private def genericPointCandidate (K : Type u) [Field K] :
+    ProjectiveSpectrum (homogeneousPieces K) where
+  asHomogeneousIdeal := ⊥
+  isPrime := by
+    simpa using (Ideal.isPrime_bot : (⊥ : Ideal (MvPolynomial (Fin 2) K)).IsPrime)
+  not_irrelevant_le := by
+    intro h
+    have hx : MvPolynomial.X (0 : Fin 2) ∈
+        (⊥ : HomogeneousIdeal (homogeneousPieces K)) :=
+      h (HomogeneousIdeal.mem_irrelevant_of_mem (homogeneousPieces K)
+        Nat.zero_lt_one (X_zero_mem_degree_one K))
+    have hx' : MvPolynomial.X (0 : Fin 2) ∈
+        (⊥ : Ideal (MvPolynomial (Fin 2) K)) := hx
+    exact MvPolynomial.X_ne_zero (R := K) (0 : Fin 2) (Ideal.mem_bot.mp hx')
+
+private lemma irreducibleSpace_projectiveLine (K : Type u) [Field K] :
+    IrreducibleSpace (scheme K) := by
+  rw [irreducibleSpace_def]
+  have hclosure : closure ({genericPointCandidate K} : Set (scheme K)) = Set.univ := by
+    apply Set.eq_univ_of_forall
+    intro x
+    change ProjectiveSpectrum (homogeneousPieces K) at x
+    change x ∈ closure ({genericPointCandidate K} :
+      Set (ProjectiveSpectrum (homogeneousPieces K)))
+    apply (ProjectiveSpectrum.le_iff_mem_closure (homogeneousPieces K)
+      (genericPointCandidate K) x).mp
+    change (⊥ : HomogeneousIdeal (homogeneousPieces K)) ≤ x.asHomogeneousIdeal
+    exact bot_le
+  change IsIrreducible (Set.univ : Set (scheme K))
+  rw [← hclosure]
+  exact isIrreducible_singleton.closure
+
+private lemma isDomain_away (K : Type u) [Field K] (i : Fin 2) :
+    IsDomain (HomogeneousLocalization.Away
+      (homogeneousPieces K) (MvPolynomial.X i)) := by
+  letI : IsDomain (homogeneousPieces K 0) :=
+    (degreeZeroRingEquiv K).toMulEquiv.isDomain_iff.mp inferInstance
+  fin_cases i
+  · exact (polynomialAwayZeroAlgEquiv K).toRingEquiv.toMulEquiv.isDomain_iff.mp
+      (inferInstanceAs (IsDomain (Polynomial (homogeneousPieces K 0))))
+  · exact (polynomialAwayAlgEquiv K).toRingEquiv.toMulEquiv.isDomain_iff.mp
+      (inferInstanceAs (IsDomain (Polynomial (homogeneousPieces K 0))))
+
+private lemma isReduced_projectiveLine (K : Type u) [Field K] :
+    IsReduced (scheme K) := by
+  let U : Fin 2 → (scheme K).Opens := fun i ↦
+    Proj.basicOpen (homogeneousPieces K) (MvPolynomial.X i)
+  have hU : ⨆ i, U i = ⊤ :=
+    Proj.iSup_basicOpen_eq_top' (homogeneousPieces K)
+      (MvPolynomial.X : Fin 2 → MvPolynomial (Fin 2) K)
+      (fun i ↦ ⟨1, MvPolynomial.isHomogeneous_X K i⟩)
+      (adjoin_X_over_degreeZero K)
+  let C : (scheme K).OpenCover := (scheme K).openCoverOfIsOpenCover U hU
+  letI (i : C.I₀) : IsReduced (C.X i) := by
+    change Fin 2 at i
+    change IsReduced (U i)
+    have hXi : MvPolynomial.X i ∈ homogeneousPieces K 1 :=
+      MvPolynomial.isHomogeneous_X K i
+    letI : IsDomain (HomogeneousLocalization.Away
+        (homogeneousPieces K) (MvPolynomial.X i)) := isDomain_away K i
+    haveI : IsIntegral
+        (Spec (.of (HomogeneousLocalization.Away
+          (homogeneousPieces K) (MvPolynomial.X i)))) := inferInstance
+    haveI : IsIntegral (U i) := IsIntegral.of_isIso
+      (Proj.basicOpenIsoSpec (homogeneousPieces K) (MvPolynomial.X i)
+        hXi Nat.zero_lt_one).inv
+    exact isReduced_of_isIntegral (U i)
+  exact IsReduced.of_openCover (scheme K) C
+
+noncomputable instance (K : Type u) [Field K] : IsIntegral (scheme K) := by
+  letI : IrreducibleSpace (scheme K) := irreducibleSpace_projectiveLine K
+  letI : IsReduced (scheme K) := isReduced_projectiveLine K
+  exact isIntegral_of_irreducibleSpace_of_isReduced (scheme K)
+
+noncomputable instance (K : Type u) [Field K] : IsNoetherian (scheme K) where
+  toIsLocallyNoetherian := LocallyOfFiniteType.isLocallyNoetherian (structureMap K)
+  toCompactSpace := compactSpace_of_universallyClosed (structureMap K)
 
 end
 end TauCeti.AlgebraicGeometry.ProjectiveLine

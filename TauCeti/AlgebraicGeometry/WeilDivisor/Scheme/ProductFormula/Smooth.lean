@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 module
 
 public import TauCeti.AlgebraicGeometry.WeilDivisor.Scheme.ProductFormula.Valuative
-public import TauCeti.AlgebraicGeometry.ProjectiveLine.Integral
+public import TauCeti.AlgebraicGeometry.ProjectiveLine.Points
 public import TauCeti.RingTheory.Smooth.DimensionOne
 public import Mathlib.AlgebraicGeometry.Morphisms.Smooth
 public import Mathlib.AlgebraicGeometry.Properties
