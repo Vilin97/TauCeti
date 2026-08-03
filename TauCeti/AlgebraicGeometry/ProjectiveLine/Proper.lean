@@ -64,6 +64,18 @@ lemma ofElement_comp_structureMap (K F : Type u) [Field K] [Field F]
   ext r
   simp
 
+/-- The point `[1 : g]` lies over the base-field map `K → F`. -/
+@[reassoc]
+lemma ofInverseElement_comp_structureMap (K F : Type u) [Field K] [Field F]
+    (ι : K →+* F) (g : F) :
+    ofInverseElement K F ι g ≫ structureMap K =
+      Spec.map (CommRingCat.ofHom ι) := by
+  rw [structureMap, ← Category.assoc, ofInverseElement_toSpecZero]
+  rw [← Spec.map_comp]
+  congr 1
+  ext r
+  simp
+
 noncomputable instance (K : Type u) [Field K] :
     LocallyOfFiniteType (structureMap K) := by
   dsimp only [structureMap]

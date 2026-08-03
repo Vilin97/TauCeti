@@ -6,6 +6,7 @@ module
 
 public import TauCeti.AlgebraicGeometry.ProjectiveLine.Proper
 public import Mathlib.AlgebraicGeometry.Morphisms.Smooth
+public import Mathlib.RingTheory.Polynomial.Ideal
 
 /-!
 # Smoothness and integrality of the projective line
@@ -29,14 +30,6 @@ namespace TauCeti.AlgebraicGeometry.ProjectiveLine
 universe u
 
 noncomputable section
-
-private lemma X_one_mem_degree_one (K : Type u) [Field K] :
-    MvPolynomial.X (1 : Fin 2) ∈ homogeneousPieces K 1 :=
-  MvPolynomial.isHomogeneous_X K (1 : Fin 2)
-
-private lemma X_zero_mem_degree_one (K : Type u) [Field K] :
-    MvPolynomial.X (0 : Fin 2) ∈ homogeneousPieces K 1 :=
-  MvPolynomial.isHomogeneous_X K (0 : Fin 2)
 
 private noncomputable def t (K : Type u) [Field K] :
     HomogeneousLocalization.Away
@@ -234,6 +227,200 @@ private noncomputable def polynomialAwayAlgEquiv (K : Type u) [Field K] :
   (Polynomial.algEquivOfTranscendental (homogeneousPieces K 0) (t K)
     (transcendental_t K)).trans
       ((Subalgebra.equivOfEq _ _ (adjoin_t K)).trans Subalgebra.topEquiv)
+
+/-- The standard affine chart of the projective line is a polynomial line over the degree-zero
+homogeneous coordinate ring. -/
+noncomputable def standardAffinePolynomialEquiv (K : Type u) [Field K] :
+    Polynomial (homogeneousPieces K 0) ≃+*
+      Γ(scheme K, standardAffineOpen K) :=
+  (polynomialAwayAlgEquiv K).toRingEquiv.trans
+    (Proj.basicOpenIsoAway (homogeneousPieces K) (MvPolynomial.X (1 : Fin 2))
+      (X_one_mem_degree_one K) Nat.zero_lt_one).commRingCatIsoToRingEquiv
+
+/-- Under the polynomial presentation of the standard chart, the polynomial variable is the
+affine coordinate `X₀ / X₁`. -/
+@[simp]
+lemma standardAffinePolynomialEquiv_X (K : Type u) [Field K] :
+    standardAffinePolynomialEquiv K Polynomial.X = affineCoordinate K := by
+  change (Proj.basicOpenIsoAway (homogeneousPieces K) (MvPolynomial.X (1 : Fin 2))
+      (X_one_mem_degree_one K) Nat.zero_lt_one).hom
+        (polynomialAwayAlgEquiv K Polynomial.X) = _
+  have hX : polynomialAwayAlgEquiv K Polynomial.X = t K := by
+    simp [polynomialAwayAlgEquiv]
+  rw [hX]
+  congr 1
+
+/-- The standard affine coordinate on `ℙ¹` is nonzero. -/
+lemma affineCoordinate_ne_zero (K : Type u) [Field K] :
+    affineCoordinate K ≠ 0 := by
+  letI : Field (homogeneousPieces K 0) :=
+    ((degreeZeroRingEquiv K).symm.toMulEquiv.isField (Field.toIsField K)).toField
+  intro h
+  have hX : (Polynomial.X : Polynomial (homogeneousPieces K 0)) = 0 := by
+    apply (standardAffinePolynomialEquiv K).injective
+    simpa only [standardAffinePolynomialEquiv_X, map_zero] using h
+  exact Polynomial.X_ne_zero hX
+
+/-- The standard chart `D₊(X₁)` is affine. -/
+lemma isAffineOpen_standardAffineOpen (K : Type u) [Field K] :
+    IsAffineOpen (standardAffineOpen K) :=
+  Proj.isAffineOpen_basicOpen (𝒜 := homogeneousPieces K)
+    (f := MvPolynomial.X (1 : Fin 2))
+    (f_deg := X_one_mem_degree_one K) (hm := Nat.zero_lt_one)
+
+/-- The two standard affine charts cover the projective line. -/
+lemma standardAffineOpen_sup_infinityAffineOpen_eq_top
+    (K : Type u) [Field K] :
+    standardAffineOpen K ⊔ infinityAffineOpen K = ⊤ := by
+  have hcover : ⨆ i : Fin 2,
+      Proj.basicOpen (homogeneousPieces K) (MvPolynomial.X i) = ⊤ :=
+    Proj.iSup_basicOpen_eq_top' (homogeneousPieces K)
+      (MvPolynomial.X : Fin 2 → MvPolynomial (Fin 2) K)
+      (fun i ↦ ⟨1, MvPolynomial.isHomogeneous_X K i⟩)
+      (adjoin_X_over_degreeZero K)
+  apply top_unique
+  rw [← hcover]
+  apply iSup_le
+  intro i
+  fin_cases i
+  · exact le_sup_right
+  · exact le_sup_left
+
+/-- The zero locus of the affine coordinate is a prime point of the standard chart. -/
+theorem span_affineCoordinate_isPrime (K : Type u) [Field K] :
+    (Ideal.span ({affineCoordinate K} : Set
+      Γ(scheme K, standardAffineOpen K))).IsPrime := by
+  letI : Field (homogeneousPieces K 0) :=
+    ((degreeZeroRingEquiv K).symm.toMulEquiv.isField (Field.toIsField K)).toField
+  let e := standardAffinePolynomialEquiv K
+  have hprimeX : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).IsPrime := by
+    rw [← Polynomial.ker_constantCoeff]
+    exact RingHom.ker_isPrime _
+  letI : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).IsPrime := hprimeX
+  have hmap : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).map e =
+        Ideal.span ({affineCoordinate K} : Set
+          Γ(scheme K, standardAffineOpen K)) := by
+    rw [Ideal.map_span, Set.image_singleton]
+    exact congrArg Ideal.span (Set.singleton_eq_singleton_iff.mpr
+      (standardAffinePolynomialEquiv_X K))
+  rw [← hmap]
+  infer_instance
+
+/-- The zero locus of the affine coordinate is a maximal point of the standard chart. -/
+theorem span_affineCoordinate_isMaximal (K : Type u) [Field K] :
+    (Ideal.span ({affineCoordinate K} : Set
+      Γ(scheme K, standardAffineOpen K))).IsMaximal := by
+  letI : Field (homogeneousPieces K 0) :=
+    ((degreeZeroRingEquiv K).symm.toMulEquiv.isField (Field.toIsField K)).toField
+  let e := standardAffinePolynomialEquiv K
+  have hmaxX : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).IsMaximal := by
+    rw [← Polynomial.ker_constantCoeff]
+    exact RingHom.ker_isMaximal_of_surjective _ Polynomial.constantCoeff_surjective
+  letI : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).IsMaximal := hmaxX
+  have hmap : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).map e =
+        Ideal.span ({affineCoordinate K} : Set
+          Γ(scheme K, standardAffineOpen K)) := by
+    rw [Ideal.map_span, Set.image_singleton]
+    exact congrArg Ideal.span (Set.singleton_eq_singleton_iff.mpr
+      (standardAffinePolynomialEquiv_X K))
+  rw [← hmap]
+  infer_instance
+
+/-- The prime of the standard affine chart cut out by its coordinate. -/
+@[expose] noncomputable def zeroPrime (K : Type u) [Field K] :
+    PrimeSpectrum Γ(scheme K, standardAffineOpen K) :=
+  ⟨Ideal.span ({affineCoordinate K} : Set
+    Γ(scheme K, standardAffineOpen K)), span_affineCoordinate_isPrime K⟩
+
+@[simp]
+lemma zeroPrime_asIdeal (K : Type u) [Field K] :
+    (zeroPrime K).asIdeal = Ideal.span ({affineCoordinate K} : Set
+      Γ(scheme K, standardAffineOpen K)) := rfl
+
+/-- The zero point `[0 : 1]` of the projective line, defined through the standard affine chart. -/
+noncomputable def zeroPoint (K : Type u) [Field K] : scheme K :=
+  (isAffineOpen_standardAffineOpen K).fromSpec (zeroPrime K)
+
+/-- The zero point belongs to the standard affine chart. -/
+lemma zeroPoint_mem_standardAffineOpen (K : Type u) [Field K] :
+    zeroPoint K ∈ standardAffineOpen K := by
+  let hU := isAffineOpen_standardAffineOpen K
+  let q : Spec Γ(scheme K, standardAffineOpen K) := zeroPrime K
+  have hmem : hU.fromSpec q ∈ Set.range hU.fromSpec := Set.mem_range_self q
+  rw [hU.range_fromSpec] at hmem
+  simpa [zeroPoint, q] using hmem
+
+/-- In the standard affine chart, the prime ideal of the zero point is generated by the affine
+coordinate. -/
+lemma primeIdealOf_zeroPoint (K : Type u) [Field K] :
+    (isAffineOpen_standardAffineOpen K).primeIdealOf
+        ⟨zeroPoint K, zeroPoint_mem_standardAffineOpen K⟩ = zeroPrime K := by
+  let hU := isAffineOpen_standardAffineOpen K
+  apply hU.fromSpec.isOpenEmbedding.injective
+  rw [hU.fromSpec_primeIdealOf]
+  rfl
+
+@[simp]
+lemma primeIdealOf_zeroPoint_asIdeal (K : Type u) [Field K] :
+    ((isAffineOpen_standardAffineOpen K).primeIdealOf
+      ⟨zeroPoint K, zeroPoint_mem_standardAffineOpen K⟩).asIdeal =
+        Ideal.span ({affineCoordinate K} : Set
+          Γ(scheme K, standardAffineOpen K)) := by
+  rw [primeIdealOf_zeroPoint, zeroPrime_asIdeal]
+
+@[simp]
+lemma primeIdealOf_zeroPoint_asIdeal_of_mem (K : Type u) [Field K]
+    (hz : zeroPoint K ∈ standardAffineOpen K) :
+    ((isAffineOpen_standardAffineOpen K).primeIdealOf ⟨zeroPoint K, hz⟩).asIdeal =
+      Ideal.span ({affineCoordinate K} : Set
+        Γ(scheme K, standardAffineOpen K)) := by
+  simpa only [Subsingleton.elim hz (zeroPoint_mem_standardAffineOpen K)] using
+    primeIdealOf_zeroPoint_asIdeal K
+
+/-- A point of the standard chart contains the affine coordinate in its prime ideal exactly
+when it is the zero point. -/
+lemma affineCoordinate_mem_primeIdealOf_iff_eq_zeroPoint
+    (K : Type u) [Field K] (y : scheme K) (hy : y ∈ standardAffineOpen K) :
+    affineCoordinate K ∈
+        ((isAffineOpen_standardAffineOpen K).primeIdealOf ⟨y, hy⟩).asIdeal ↔
+      y = zeroPoint K := by
+  let hU := isAffineOpen_standardAffineOpen K
+  constructor
+  · intro ht
+    have ht' : affineCoordinate K ∈
+        (hU.primeIdealOf ⟨y, hy⟩).asIdeal := by
+      simpa [hU] using ht
+    have hle : Ideal.span ({affineCoordinate K} : Set
+        Γ(scheme K, standardAffineOpen K)) ≤
+        (hU.primeIdealOf ⟨y, hy⟩).asIdeal :=
+      Ideal.span_le.mpr (by
+        intro z hz
+        have hz' : z = affineCoordinate K := Set.mem_singleton_iff.mp hz
+        subst z
+        change affineCoordinate K ∈ (hU.primeIdealOf ⟨y, hy⟩).asIdeal
+        exact ht')
+    have heq : Ideal.span ({affineCoordinate K} : Set
+        Γ(scheme K, standardAffineOpen K)) =
+        (hU.primeIdealOf ⟨y, hy⟩).asIdeal :=
+      (span_affineCoordinate_isMaximal K).eq_of_le
+        (hU.primeIdealOf ⟨y, hy⟩).isPrime.ne_top hle
+    have hprime : hU.primeIdealOf ⟨y, hy⟩ = zeroPrime K := by
+      apply PrimeSpectrum.ext
+      exact heq.symm.trans (zeroPrime_asIdeal K).symm
+    calc
+      y = hU.fromSpec (hU.primeIdealOf ⟨y, hy⟩) :=
+        (hU.fromSpec_primeIdealOf ⟨y, hy⟩).symm
+      _ = hU.fromSpec (zeroPrime K) := congrArg hU.fromSpec hprime
+      _ = zeroPoint K := rfl
+  · rintro rfl
+    rw [primeIdealOf_zeroPoint_asIdeal_of_mem]
+    exact Ideal.subset_span (Set.mem_singleton _)
 
 private noncomputable def mvPolynomialPresentation (R : Type u) [CommRing R] :
     Algebra.Presentation R (MvPolynomial Unit R) Unit Empty where
@@ -458,6 +645,262 @@ private noncomputable def polynomialAwayZeroAlgEquiv (K : Type u) [Field K] :
     (transcendental_tZero K)).trans
       ((Subalgebra.equivOfEq _ _ (adjoin_tZero K)).trans Subalgebra.topEquiv)
 
+/-- The affine chart containing infinity is a polynomial line over the degree-zero homogeneous
+coordinate ring. -/
+noncomputable def infinityAffinePolynomialEquiv (K : Type u) [Field K] :
+    Polynomial (homogeneousPieces K 0) ≃+*
+      Γ(scheme K, infinityAffineOpen K) :=
+  (polynomialAwayZeroAlgEquiv K).toRingEquiv.trans
+    (Proj.basicOpenIsoAway (homogeneousPieces K) (MvPolynomial.X (0 : Fin 2))
+      (X_zero_mem_degree_one K) Nat.zero_lt_one).commRingCatIsoToRingEquiv
+
+/-- Under the polynomial presentation of the chart at infinity, the polynomial variable is the
+inverse affine coordinate `X₁ / X₀`. -/
+@[simp]
+lemma infinityAffinePolynomialEquiv_X (K : Type u) [Field K] :
+    infinityAffinePolynomialEquiv K Polynomial.X = inverseAffineCoordinate K := by
+  change (Proj.basicOpenIsoAway (homogeneousPieces K) (MvPolynomial.X (0 : Fin 2))
+      (X_zero_mem_degree_one K) Nat.zero_lt_one).hom
+        (polynomialAwayZeroAlgEquiv K Polynomial.X) = _
+  have hX : polynomialAwayZeroAlgEquiv K Polynomial.X = tZero K := by
+    simp [polynomialAwayZeroAlgEquiv]
+  rw [hX]
+  congr 1
+
+/-- The inverse affine coordinate on `ℙ¹` is nonzero. -/
+lemma inverseAffineCoordinate_ne_zero (K : Type u) [Field K] :
+    inverseAffineCoordinate K ≠ 0 := by
+  letI : Field (homogeneousPieces K 0) :=
+    ((degreeZeroRingEquiv K).symm.toMulEquiv.isField (Field.toIsField K)).toField
+  intro h
+  have hX : (Polynomial.X : Polynomial (homogeneousPieces K 0)) = 0 := by
+    apply (infinityAffinePolynomialEquiv K).injective
+    simpa only [infinityAffinePolynomialEquiv_X, map_zero] using h
+  exact Polynomial.X_ne_zero hX
+
+/-- The chart `D₊(X₀)` containing infinity is affine. -/
+lemma isAffineOpen_infinityAffineOpen (K : Type u) [Field K] :
+    IsAffineOpen (infinityAffineOpen K) :=
+  Proj.isAffineOpen_basicOpen (𝒜 := homogeneousPieces K)
+    (f := MvPolynomial.X (0 : Fin 2))
+    (f_deg := X_zero_mem_degree_one K) (hm := Nat.zero_lt_one)
+
+/-- The zero locus of the inverse affine coordinate is a prime point of the chart at infinity. -/
+theorem span_inverseAffineCoordinate_isPrime (K : Type u) [Field K] :
+    (Ideal.span ({inverseAffineCoordinate K} : Set
+      Γ(scheme K, infinityAffineOpen K))).IsPrime := by
+  letI : Field (homogeneousPieces K 0) :=
+    ((degreeZeroRingEquiv K).symm.toMulEquiv.isField (Field.toIsField K)).toField
+  let e := infinityAffinePolynomialEquiv K
+  have hprimeX : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).IsPrime := by
+    rw [← Polynomial.ker_constantCoeff]
+    exact RingHom.ker_isPrime _
+  letI : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).IsPrime := hprimeX
+  have hmap : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).map e =
+        Ideal.span ({inverseAffineCoordinate K} : Set
+          Γ(scheme K, infinityAffineOpen K)) := by
+    rw [Ideal.map_span, Set.image_singleton]
+    exact congrArg Ideal.span (Set.singleton_eq_singleton_iff.mpr
+      (infinityAffinePolynomialEquiv_X K))
+  rw [← hmap]
+  infer_instance
+
+/-- The zero locus of the inverse affine coordinate is a maximal point of the chart at
+infinity. -/
+theorem span_inverseAffineCoordinate_isMaximal (K : Type u) [Field K] :
+    (Ideal.span ({inverseAffineCoordinate K} : Set
+      Γ(scheme K, infinityAffineOpen K))).IsMaximal := by
+  letI : Field (homogeneousPieces K 0) :=
+    ((degreeZeroRingEquiv K).symm.toMulEquiv.isField (Field.toIsField K)).toField
+  let e := infinityAffinePolynomialEquiv K
+  have hmaxX : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).IsMaximal := by
+    rw [← Polynomial.ker_constantCoeff]
+    exact RingHom.ker_isMaximal_of_surjective _ Polynomial.constantCoeff_surjective
+  letI : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).IsMaximal := hmaxX
+  have hmap : (Ideal.span ({Polynomial.X} : Set
+      (Polynomial (homogeneousPieces K 0)))).map e =
+        Ideal.span ({inverseAffineCoordinate K} : Set
+          Γ(scheme K, infinityAffineOpen K)) := by
+    rw [Ideal.map_span, Set.image_singleton]
+    exact congrArg Ideal.span (Set.singleton_eq_singleton_iff.mpr
+      (infinityAffinePolynomialEquiv_X K))
+  rw [← hmap]
+  infer_instance
+
+/-- The prime of the affine chart at infinity cut out by the inverse coordinate. -/
+@[expose] noncomputable def infinityPrime (K : Type u) [Field K] :
+    PrimeSpectrum Γ(scheme K, infinityAffineOpen K) :=
+  ⟨Ideal.span ({inverseAffineCoordinate K} : Set
+    Γ(scheme K, infinityAffineOpen K)), span_inverseAffineCoordinate_isPrime K⟩
+
+@[simp]
+lemma infinityPrime_asIdeal (K : Type u) [Field K] :
+    (infinityPrime K).asIdeal = Ideal.span ({inverseAffineCoordinate K} : Set
+      Γ(scheme K, infinityAffineOpen K)) := rfl
+
+/-- The point `[1 : 0]` of the projective line, defined through the affine chart at infinity. -/
+noncomputable def infinityPoint (K : Type u) [Field K] : scheme K :=
+  (isAffineOpen_infinityAffineOpen K).fromSpec (infinityPrime K)
+
+/-- The point at infinity belongs to the chart `D₊(X₀)`. -/
+lemma infinityPoint_mem_infinityAffineOpen (K : Type u) [Field K] :
+    infinityPoint K ∈ infinityAffineOpen K := by
+  let hU := isAffineOpen_infinityAffineOpen K
+  let q : Spec Γ(scheme K, infinityAffineOpen K) := infinityPrime K
+  have hmem : hU.fromSpec q ∈ Set.range hU.fromSpec := Set.mem_range_self q
+  rw [hU.range_fromSpec] at hmem
+  simpa [infinityPoint, q] using hmem
+
+/-- In the chart at infinity, the prime ideal of `[1 : 0]` is generated by the inverse affine
+coordinate. -/
+lemma primeIdealOf_infinityPoint (K : Type u) [Field K] :
+    (isAffineOpen_infinityAffineOpen K).primeIdealOf
+        ⟨infinityPoint K, infinityPoint_mem_infinityAffineOpen K⟩ = infinityPrime K := by
+  let hU := isAffineOpen_infinityAffineOpen K
+  apply hU.fromSpec.isOpenEmbedding.injective
+  rw [hU.fromSpec_primeIdealOf]
+  rfl
+
+@[simp]
+lemma primeIdealOf_infinityPoint_asIdeal (K : Type u) [Field K] :
+    ((isAffineOpen_infinityAffineOpen K).primeIdealOf
+      ⟨infinityPoint K, infinityPoint_mem_infinityAffineOpen K⟩).asIdeal =
+        Ideal.span ({inverseAffineCoordinate K} : Set
+          Γ(scheme K, infinityAffineOpen K)) := by
+  rw [primeIdealOf_infinityPoint, infinityPrime_asIdeal]
+
+@[simp]
+lemma primeIdealOf_infinityPoint_asIdeal_of_mem (K : Type u) [Field K]
+    (hinf : infinityPoint K ∈ infinityAffineOpen K) :
+    ((isAffineOpen_infinityAffineOpen K).primeIdealOf ⟨infinityPoint K, hinf⟩).asIdeal =
+      Ideal.span ({inverseAffineCoordinate K} : Set
+        Γ(scheme K, infinityAffineOpen K)) := by
+  simpa only [Subsingleton.elim hinf (infinityPoint_mem_infinityAffineOpen K)] using
+    primeIdealOf_infinityPoint_asIdeal K
+
+/-- A point of the chart at infinity contains the inverse affine coordinate in its prime ideal
+exactly when it is the point at infinity. -/
+lemma inverseAffineCoordinate_mem_primeIdealOf_iff_eq_infinityPoint
+    (K : Type u) [Field K] (y : scheme K) (hy : y ∈ infinityAffineOpen K) :
+    inverseAffineCoordinate K ∈
+        ((isAffineOpen_infinityAffineOpen K).primeIdealOf ⟨y, hy⟩).asIdeal ↔
+      y = infinityPoint K := by
+  let hU := isAffineOpen_infinityAffineOpen K
+  constructor
+  · intro ht
+    have ht' : inverseAffineCoordinate K ∈
+        (hU.primeIdealOf ⟨y, hy⟩).asIdeal := by
+      simpa [hU] using ht
+    have hle : Ideal.span ({inverseAffineCoordinate K} : Set
+        Γ(scheme K, infinityAffineOpen K)) ≤
+        (hU.primeIdealOf ⟨y, hy⟩).asIdeal :=
+      Ideal.span_le.mpr (by
+        intro z hz
+        have hz' : z = inverseAffineCoordinate K := Set.mem_singleton_iff.mp hz
+        subst z
+        change inverseAffineCoordinate K ∈ (hU.primeIdealOf ⟨y, hy⟩).asIdeal
+        exact ht')
+    have heq : Ideal.span ({inverseAffineCoordinate K} : Set
+        Γ(scheme K, infinityAffineOpen K)) =
+        (hU.primeIdealOf ⟨y, hy⟩).asIdeal :=
+      (span_inverseAffineCoordinate_isMaximal K).eq_of_le
+        (hU.primeIdealOf ⟨y, hy⟩).isPrime.ne_top hle
+    have hprime : hU.primeIdealOf ⟨y, hy⟩ = infinityPrime K := by
+      apply PrimeSpectrum.ext
+      exact heq.symm.trans (infinityPrime_asIdeal K).symm
+    calc
+      y = hU.fromSpec (hU.primeIdealOf ⟨y, hy⟩) :=
+        (hU.fromSpec_primeIdealOf ⟨y, hy⟩).symm
+      _ = hU.fromSpec (infinityPrime K) := congrArg hU.fromSpec hprime
+      _ = infinityPoint K := rfl
+  · rintro rfl
+    rw [primeIdealOf_infinityPoint_asIdeal_of_mem]
+    exact Ideal.subset_span (Set.mem_singleton _)
+
+/-- The zero point as a section of the projective-line structure morphism. -/
+noncomputable def zeroSection (K : Type u) [Field K] :
+    Spec (.of K) ⟶ scheme K :=
+  ofElement K K (RingHom.id K) 0
+
+@[simp]
+lemma zeroSection_comp_structureMap (K : Type u) [Field K] :
+    zeroSection K ≫ structureMap K = 𝟙 _ := by
+  rw [zeroSection, ofElement_comp_structureMap]
+  exact Spec.map_id (CommRingCat.of K)
+
+/-- The section `zeroSection` sends the unique point of `Spec K` to `[0 : 1]`. -/
+@[simp]
+lemma zeroSection_closedPoint (K : Type u) [Field K] :
+    zeroSection K (IsLocalRing.closedPoint K) = zeroPoint K := by
+  let s := zeroSection K
+  let z : Spec (.of K) := IsLocalRing.closedPoint K
+  let U := standardAffineOpen K
+  let hU := isAffineOpen_standardAffineOpen K
+  have hpre : s ⁻¹ᵁ U = ⊤ :=
+    ofElement_preimage_basicOpen_X_one K K (RingHom.id K) 0
+  have hzU : s z ∈ U := by
+    change z ∈ s ⁻¹ᵁ U
+    rw [hpre]
+    trivial
+  apply (affineCoordinate_mem_primeIdealOf_iff_eq_zeroPoint K (s z) hzU).mp
+  let htop := isAffineOpen_top (Spec (.of K))
+  have hcomap := IsAffineOpen.comap_primeIdealOf_appLE U hU ⊤ htop
+    (f := s) hpre.ge (x := z) trivial
+  have hideal := congrArg PrimeSpectrum.asIdeal hcomap
+  rw [PrimeSpectrum.comap_asIdeal] at hideal
+  rw [← hideal]
+  change s.appLE U ⊤ hpre.ge (affineCoordinate K) ∈
+    (htop.primeIdealOf ⟨z, trivial⟩).asIdeal
+  rw [show s.appLE U ⊤ hpre.ge (affineCoordinate K) = 0 by
+    simpa [s, zeroSection] using
+      ofElement_appLE_affineCoordinate K K (RingHom.id K) 0]
+  exact Ideal.zero_mem _
+
+/-- The point at infinity as a section of the projective-line structure morphism. -/
+noncomputable def infinitySection (K : Type u) [Field K] :
+    Spec (.of K) ⟶ scheme K :=
+  ofInverseElement K K (RingHom.id K) 0
+
+@[simp]
+lemma infinitySection_comp_structureMap (K : Type u) [Field K] :
+    infinitySection K ≫ structureMap K = 𝟙 _ := by
+  rw [infinitySection, ofInverseElement_comp_structureMap]
+  exact Spec.map_id (CommRingCat.of K)
+
+/-- The section `infinitySection` sends the unique point of `Spec K` to `[1 : 0]`. -/
+@[simp]
+lemma infinitySection_closedPoint (K : Type u) [Field K] :
+    infinitySection K (IsLocalRing.closedPoint K) = infinityPoint K := by
+  let s := infinitySection K
+  let z : Spec (.of K) := IsLocalRing.closedPoint K
+  let U := infinityAffineOpen K
+  let hU := isAffineOpen_infinityAffineOpen K
+  have hpre : s ⁻¹ᵁ U = ⊤ :=
+    ofInverseElement_preimage_basicOpen_X_zero K K (RingHom.id K) 0
+  have hzU : s z ∈ U := by
+    change z ∈ s ⁻¹ᵁ U
+    rw [hpre]
+    trivial
+  apply (inverseAffineCoordinate_mem_primeIdealOf_iff_eq_infinityPoint
+    K (s z) hzU).mp
+  let htop := isAffineOpen_top (Spec (.of K))
+  have hcomap := IsAffineOpen.comap_primeIdealOf_appLE U hU ⊤ htop
+    (f := s) hpre.ge (x := z) trivial
+  have hideal := congrArg PrimeSpectrum.asIdeal hcomap
+  rw [PrimeSpectrum.comap_asIdeal] at hideal
+  rw [← hideal]
+  change s.appLE U ⊤ hpre.ge (inverseAffineCoordinate K) ∈
+    (htop.primeIdealOf ⟨z, trivial⟩).asIdeal
+  rw [show s.appLE U ⊤ hpre.ge (inverseAffineCoordinate K) = 0 by
+    simpa [s, infinitySection] using
+      ofInverseElement_appLE_inverseAffineCoordinate K K (RingHom.id K) 0]
+  exact Ideal.zero_mem _
+
 private lemma away_zero_isStandardSmoothOfRelativeDimension_one
     (K : Type u) [Field K] :
     Algebra.IsStandardSmoothOfRelativeDimension 1 (homogeneousPieces K 0)
@@ -591,6 +1034,50 @@ noncomputable instance (K : Type u) [Field K] : IsIntegral (scheme K) := by
   letI : IsReduced (scheme K) := isReduced_projectiveLine K
   exact isIntegral_of_irreducibleSpace_of_isReduced (scheme K)
 
+/-- The point `[0 : 1]` is not the generic point of the projective line. -/
+lemma zeroPoint_ne_genericPoint (K : Type u) [Field K] :
+    zeroPoint K ≠ genericPoint (scheme K) := by
+  intro h
+  let U := standardAffineOpen K
+  let hU := isAffineOpen_standardAffineOpen K
+  let hz : zeroPoint K ∈ U := zeroPoint_mem_standardAffineOpen K
+  letI : Nonempty U := ⟨⟨zeroPoint K, hz⟩⟩
+  have hη : genericPoint (scheme K) ∈ U :=
+    ((genericPoint_spec (scheme K)).mem_open_set_iff U.isOpen).mpr
+      ⟨zeroPoint K, trivial, hz⟩
+  have heq : hU.primeIdealOf ⟨zeroPoint K, hz⟩ =
+      hU.primeIdealOf ⟨genericPoint (scheme K), hη⟩ := by
+    congr 1
+    exact Subtype.ext h
+  have hηIdeal : (hU.primeIdealOf ⟨genericPoint (scheme K), hη⟩).asIdeal = ⊥ := by
+    rw [hU.primeIdealOf_genericPoint, genericPoint_eq_bot_of_affine]
+    rfl
+  have heqIdeal := congrArg PrimeSpectrum.asIdeal heq
+  rw [primeIdealOf_zeroPoint_asIdeal_of_mem K hz, hηIdeal] at heqIdeal
+  exact affineCoordinate_ne_zero K (Ideal.span_singleton_eq_bot.mp heqIdeal)
+
+/-- The point `[1 : 0]` is not the generic point of the projective line. -/
+lemma infinityPoint_ne_genericPoint (K : Type u) [Field K] :
+    infinityPoint K ≠ genericPoint (scheme K) := by
+  intro h
+  let U := infinityAffineOpen K
+  let hU := isAffineOpen_infinityAffineOpen K
+  let hinf : infinityPoint K ∈ U := infinityPoint_mem_infinityAffineOpen K
+  letI : Nonempty U := ⟨⟨infinityPoint K, hinf⟩⟩
+  have hη : genericPoint (scheme K) ∈ U :=
+    ((genericPoint_spec (scheme K)).mem_open_set_iff U.isOpen).mpr
+      ⟨infinityPoint K, trivial, hinf⟩
+  have heq : hU.primeIdealOf ⟨infinityPoint K, hinf⟩ =
+      hU.primeIdealOf ⟨genericPoint (scheme K), hη⟩ := by
+    congr 1
+    exact Subtype.ext h
+  have hηIdeal : (hU.primeIdealOf ⟨genericPoint (scheme K), hη⟩).asIdeal = ⊥ := by
+    rw [hU.primeIdealOf_genericPoint, genericPoint_eq_bot_of_affine]
+    rfl
+  have heqIdeal := congrArg PrimeSpectrum.asIdeal heq
+  rw [primeIdealOf_infinityPoint_asIdeal_of_mem K hinf, hηIdeal] at heqIdeal
+  exact inverseAffineCoordinate_ne_zero K (Ideal.span_singleton_eq_bot.mp heqIdeal)
+
 noncomputable instance (K : Type u) [Field K] : IsNoetherian (scheme K) where
   toIsLocallyNoetherian := LocallyOfFiniteType.isLocallyNoetherian (structureMap K)
   toCompactSpace := compactSpace_of_universallyClosed (structureMap K)
@@ -598,4 +1085,3 @@ noncomputable instance (K : Type u) [Field K] : IsNoetherian (scheme K) where
 
 end
 end TauCeti.AlgebraicGeometry.ProjectiveLine
-
