@@ -5,6 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 module
 
 public import TauCeti.AlgebraicGeometry.AbelianVariety.Trivial
+public import TauCeti.AlgebraicGeometry.Dimension
 
 /-!
 # Products of abelian varieties
@@ -76,6 +77,14 @@ lemma prod_toOver (A B : AbelianVariety K) :
 lemma prod_toScheme (A B : AbelianVariety K) :
     (prod A B).toScheme = pullback A.toOver.hom B.toOver.hom := by
   rw [toScheme, prod_toOver, Over.tensorObj_left]
+
+/-- The dimension of a product is the sum of the dimensions of its factors. -/
+@[simp]
+theorem prod_dim (A B : AbelianVariety K) :
+    (prod A B).dim = A.dim + B.dim := by
+  rw [dim_def, prod_toScheme, dim_def, dim_def]
+  exact Scheme.topologicalKrullDim_pullback_eq_add_of_nonempty
+    A.toOver.hom B.toOver.hom
 
 /-- The unit section of a product is the componentwise unit section. -/
 @[simp]
